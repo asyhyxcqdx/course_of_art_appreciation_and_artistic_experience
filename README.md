@@ -3,32 +3,40 @@
 《美术鉴赏与艺术体验》课程期末作品（计算机科学专业方向）  
 主题：将中国水墨的“晕染、留白、流动、偶然性”与前端生成算法结合。
 
+本项目强调“艺术感受如何被计算表达”：  
+将审美语言拆解为可调参数、可执行规则和可重复验证的交互流程。
+
 ## 1. 项目简介
 
 本项目是一个基于 `p5.js` 的交互式生成艺术网页。  
-观众通过鼠标移动参与创作，画面会实时生成不同的“数字墨迹”轨迹。
+观众通过鼠标移动参与创作，画面实时生成“数字墨迹/粒子轨迹”。
 
-作品强调：
+当前版本采用**四主题独立粒子行为**，而不是换色：
 
-- 艺术性：水墨质感、留白节奏、慢扩散与透明叠加
-- 计算机特征：粒子系统、随机算法、速度映射、实时渲染
+- `水墨黑白`：保留水墨质感，带软边与晕开
+- `蓝紫星空`：低密度星点轨迹，干净淡出，不做墨晕扩散
+- `暖色花瓣`：低密度花瓣笔触，向外飘散并逐渐透明
+- `赛博霓虹`：放射状轨迹，带拖尾与闪烁，后期降亮并火星式熄灭
 
 ## 2. 功能列表
 
-- 全屏画布 + 自适应窗口尺寸
-- 鼠标移动生成水墨粒子
-- 鼠标速度映射粒子数量/大小/扩散程度
-- 四种模式手动切换（模式块按钮）
+- 全屏画布 + 自适应窗口
+- 鼠标/触摸移动实时生成粒子
+- 速度映射粒子数量、尺寸、扩散与动能
+- 四种主题手动切换（右上角/移动端底部）
 - 清屏按钮（重置画面）
-- 截图保存按钮（导出 PNG）
+- 截图按钮（导出 PNG）
 - 移动端布局适配
 
 ## 3. 项目结构
 
 ```text
 .
-├─ index.html   # 页面结构与控制面板（模式块/清屏/截图按钮）
-└─ sketch.js    # p5 绘制逻辑、粒子系统与交互逻辑
+├─ index.html    # 页面结构与控制面板
+├─ sketch.js     # p5 绘制、粒子系统、主题分支行为
+├─ README.md
+└─ output/
+   └─ playwright/ # Playwright MCP 回归截图（本地测试产物）
 ```
 
 ## 4. 运行方式
@@ -36,7 +44,7 @@
 在项目目录启动本地静态服务：
 
 ```bash
-cd d:\lesson\美术鉴赏与艺术体验
+cd d:\workplace\course_of_art_appreciation_and_artistic_experience
 python -m http.server 8080
 ```
 
@@ -46,80 +54,133 @@ python -m http.server 8080
 http://127.0.0.1:8080
 ```
 
-说明：项目通过 CDN 加载 `p5.js`，需要网络可访问 CDN。
+说明：
+
+- 项目通过 CDN 加载 `p5.js`，需可访问 CDN。
+- 若 `8080` 端口被占用，可改为其他端口（如 `8090`）。
 
 ## 5. 交互说明
 
-- 模式切换：点击右上角（移动端在底部）四个模式块
-  - 水墨黑白
-  - 蓝紫星空
-  - 暖色花瓣
-  - 赛博霓虹
-- 清屏：点击“清屏”按钮，清空当前粒子并重绘背景与纹理
-- 截图：点击“截图保存”，导出当前画布 PNG
+- 模式切换：点击四个模式块（`水墨黑白 / 蓝紫星空 / 暖色花瓣 / 赛博霓虹`）
+- 清屏：点击 `清屏`，清空粒子并重绘背景/纹理
+- 截图：点击 `截图保存`，下载当前画布 PNG
 
-## 6. 关键代码说明
+## 6. 核心实现说明
 
-### 6.1 按钮点击事件是“绑定元素”，不是绑定坐标
+### 6.1 主题配置 + 行为标识
 
-```js
-const captureButton = document.getElementById("captureBtn");
-captureButton.addEventListener("click", () => {
-  captureArtwork();
-});
-```
+`THEMES` 中除配色外，新增 `particleMode`，用于决定不同主题走哪套粒子更新/渲染逻辑：
 
-含义：只有点击到 `id="captureBtn"` 这个按钮元素时，才会触发截图逻辑。
+- `ink`
+- `star`
+- `petal`
+- `cyber`
 
-### 6.2 清屏实现
+### 6.2 速度映射与主题密度控制
 
-```js
-function clearArtwork() {
-  PARTICLES.length = 0;
-  const theme = getTheme();
-  background(theme.bg[0], theme.bg[1], theme.bg[2]);
-  image(textureLayer, 0, 0);
-  firstFrameAfterResize = false;
-}
-```
+粒子生成仍由鼠标速度驱动，但 `segmentSteps` 会按主题缩放：
 
-逻辑：清空粒子数组，然后用当前主题重新绘制底色与纹理层。
+- 星空更稀疏
+- 花瓣更稀疏
+- 赛博中等密度
 
-### 6.3 截图保存实现
+这样可以在同一交互方式下形成明显的主题差异。
 
-```js
-function captureArtwork() {
-  const now = new Date();
-  const stamp = `${now.getFullYear()}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}-${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}`;
-  const themeLabel = getTheme().name.replace(/\s+/g, "");
-  const filename = `墨迹-流动的算法-${themeLabel}-${stamp}`;
-  saveCanvas(mainCanvas, filename, "png");
-}
-```
+### 6.3 粒子系统的分支更新与渲染
 
-逻辑：拼接“主题名 + 时间戳”的文件名，然后调用 `p5.js` 的 `saveCanvas` 导出 PNG。
+`Particle` 按 `particleMode` 分发到独立函数：
 
-## 7. 可调参数（用于答辩演示）
+- `updateInk / renderInk`
+- `updateStar / renderStar`
+- `updatePetal / renderPetal`
+- `updateCyber / renderCyber`
 
-主要在 `sketch.js` 中按主题配置：
+其中：
 
-- `fadeAlpha`：背景残影衰减速度（越大越容易“清空”）
-- `textureStep`：纸面纹理密度（越大越稀疏）
-- `brush.amountScale`：单位轨迹粒子数量
+- 星空：快速衰减、低扩散、无晕染层
+- 花瓣：受外向力与风向影响，拉丝外飘并透明消失
+- 赛博：放射推进 + 拖尾 + 闪烁，高亮后快速降亮，后段 ember 熄灭
+
+### 6.4 清屏与截图
+
+- 清屏：`clearArtwork()` 清空粒子并重绘底层
+- 截图：`captureArtwork()` 按 `主题名 + 时间戳` 导出 PNG
+
+### 6.5 艺术语言与计算机实现的对应关系
+
+| 艺术语言 | 计算机实现 | 典型参数/函数 |
+|---|---|---|
+| 留白 | 背景持续覆盖、控制残影速度 | `fadeAlpha`、`draw()` |
+| 晕染 | 多层透明椭圆叠加、软边过渡 | `renderInk()` |
+| 流动 | 速度向量驱动粒子生成与运动 | `spawnByCursorVelocity()`、`moveVector` |
+| 偶然性 | 随机方向/随机寿命/随机扰动 | `random()`、`randomGaussian()` |
+| 节奏 | 鼠标速度映射粒子密度与段数 | `segmentSteps`、`brush.amountScale` |
+| 情绪色彩 | 不同主题独立配色与独立行为模式 | `THEMES`、`particleMode` |
+
+### 6.6 四主题艺术风格与色彩表达
+
+- `水墨黑白`  
+  关键词：克制、呼吸感、纸墨层次。  
+  色彩策略：低饱和灰黑同类色，强调浓淡关系而非强对比。
+
+- `蓝紫星空`  
+  关键词：静谧、距离感、冷色空间。  
+  色彩策略：深蓝背景 + 蓝紫青冷色粒子，弱化扩散，偏“点光”消失。
+
+- `暖色花瓣`  
+  关键词：柔和、飘散、轻盈。  
+  色彩策略：粉橘暖色群，花瓣形笔触沿外向力散开并逐步透明。
+
+- `赛博霓虹`  
+  关键词：能量、爆发、电子氛围。  
+  色彩策略：高饱和青/洋红/电蓝/金黄互补对撞，形成放射轨迹与拖尾闪烁，再快速降亮熄灭。
+
+### 6.7 学科融合总结
+
+本项目通过“审美目标定义 → 视觉规则建模 → 实时交互实现”的路径，将艺术表达与计算机实现有效结合：
+
+1. 艺术层面提供风格目标与情绪色彩方向。  
+2. 计算层面将抽象审美拆解为可执行参数和演化规则。  
+3. 交互层面通过用户输入（速度、轨迹）持续影响生成结果。  
+4. 最终输出兼具审美多样性与算法可解释性。
+
+## 7. 可调参数说明
+
+主要调整 `sketch.js` 中以下参数：
+
+- `fadeAlpha`：背景残影衰减速度（越大越快清空）
+- `brush.amountScale`：粒子数量密度
 - `brush.sizeScale`：粒子尺寸倾向
 - `brush.spreadScale`：扩散范围
-- `glowRange` / `glowAlpha`：发光主题的氛围强度
+- `drift`：漂移强度
+- `MAX_PARTICLES`：全局粒子上限
 
-## 8. 常见问题
+分主题可重点调：
+
+- 星空：`fadeAlpha`、`amountScale`、`sizeScale`
+- 花瓣：`amountScale`、`maxLife`、透明衰减指数
+- 赛博：`amountScale`、`maxLife`、tail 长度、spark/ember 衰减曲线
+
+## 8. 测试说明（Playwright MCP）
+
+已使用 Playwright MCP 做回归：
+
+- 打开网站并浏览主界面
+- 切换四个主题
+- 验证清屏与截图按钮可用
+- 检查控制台错误（0 error / 0 warning）
+- 导出主题效果截图到 `output/playwright/`
+
+## 9. 常见问题
 
 1. 点击“截图保存”没反应？
-   - 检查浏览器是否拦截下载。
-   - 尝试使用 Chrome/Edge 最新版本。
+   - 检查浏览器下载拦截设置。
+   - 建议使用最新版 Chrome/Edge。
 
 2. 页面空白或报错？
-   - 检查网络是否能访问 CDN（`p5.min.js`）。
-   - 确认是通过本地服务访问，而非直接双击文件。
+   - 检查网络能否访问 CDN（`p5.min.js`）。
+   - 请通过本地服务访问，不要直接双击 `index.html`。
 
-3. 画面太密或太淡？
-   - 调整 `MAX_PARTICLES`、`fadeAlpha`、`brush` 参数。
+3. 画面过密或过淡？
+   - 调整 `fadeAlpha`、`brush.amountScale`、`MAX_PARTICLES`。
 
