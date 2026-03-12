@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>墨迹·流动的算法</title>
+    <link rel="icon" href="data:," />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=Source+Code+Pro:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --hud-title: #252525;
+        --hud-text: rgba(40, 40, 40, 0.7);
+        --panel-bg: rgba(255, 255, 255, 0.5);
+        --panel-border: rgba(20, 20, 20, 0.12);
+        --btn-bg: rgba(255, 255, 255, 0.72);
+        --btn-border: rgba(40, 40, 40, 0.18);
+        --btn-text: #2a2a2a;
+        --btn-active-bg: rgba(28, 28, 28, 0.88);
+        --btn-active-text: #f7f7f7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      body {
+        background: #f5f1e8;
+        font-family: "Noto Serif SC", serif;
+      }
+
+      canvas {
+        display: block;
+      }
+
+      .hud {
+        position: fixed;
+        top: 18px;
+        left: 24px;
+        z-index: 20;
+        pointer-events: none;
+        user-select: none;
+      }
+
+      .hud h1 {
+        margin: 0;
+        font-size: clamp(20px, 2.4vw, 32px);
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: var(--hud-title);
+        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+      }
+
+      .hud p {
+        margin: 8px 0 0;
+        font-family: "Source Code Pro", monospace;
+        font-size: clamp(11px, 1.1vw, 14px);
+        color: var(--hud-text);
+        letter-spacing: 0.03em;
+      }
+
+      .controls {
+        position: fixed;
+        top: 18px;
+        right: 18px;
+        z-index: 30;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        width: min(460px, calc(100vw - 32px));
+        padding: 12px;
+        border-radius: 14px;
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        backdrop-filter: blur(8px);
+      }
+
+      .mode-switcher {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .mode-btn,
+      .action-btn {
+        border: 1px solid var(--btn-border);
+        background: var(--btn-bg);
+        color: var(--btn-text);
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 160ms ease;
+        font-family: "Source Code Pro", monospace;
+      }
+
+      .mode-btn {
+        padding: 10px 8px;
+        font-size: clamp(11px, 0.9vw, 12px);
+        line-height: 1.2;
+      }
+
+      .mode-btn:hover,
+      .action-btn:hover {
+        transform: translateY(-1px);
+        filter: brightness(0.98);
+      }
+
+      .mode-btn.active {
+        background: var(--btn-active-bg);
+        color: var(--btn-active-text);
+        border-color: transparent;
+      }
+
+      .action-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .action-btn {
+        padding: 9px 8px;
+        font-size: 12px;
+      }
+
+      @media (max-width: 900px) {
+        .controls {
+          top: auto;
+          right: 10px;
+          bottom: 10px;
+          left: 10px;
+          width: auto;
+        }
+
+        .mode-switcher {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .hud {
+          top: 12px;
+          left: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="hud">
+      <h1>墨迹·流动的算法</h1>
+      <p id="themeInfo">主题：水墨黑白 · 移动鼠标生成 · 点击模式块切换</p>
+    </div>
+    <div class="controls">
+      <div class="mode-switcher" id="modeSwitcher">
+        <button class="mode-btn active" data-theme="0" id="mode-0">水墨黑白</button>
+        <button class="mode-btn" data-theme="1" id="mode-1">蓝紫星空</button>
+        <button class="mode-btn" data-theme="2" id="mode-2">暖色花瓣</button>
+        <button class="mode-btn" data-theme="3" id="mode-3">赛博霓虹</button>
+      </div>
+      <div class="action-row">
+        <button class="action-btn" id="clearBtn">清屏</button>
+        <button class="action-btn" id="captureBtn">截图保存</button>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+    <script src="./sketch.js"></script>
+  </body>
+</html>
